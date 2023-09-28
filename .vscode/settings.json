@@ -1,0 +1,40 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/yongki/dev_ws/install/turtlesim/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/test2/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/pubsub_py/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/planning_v2_pkg/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/planning_small_pkg/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/planning_pkg/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/planning_big_pkg/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/lane_planning_pkg/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/amz_rrt/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/amz_global/lib/python3.8/site-packages",
+        "/opt/ros/foxy/lib/python3.8/site-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/yongki/dev_ws/install/turtlesim/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/test2/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/pubsub_py/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/planning_v2_pkg/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/planning_small_pkg/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/planning_pkg/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/planning_big_pkg/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/lane_planning_pkg/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/amz_rrt/lib/python3.8/site-packages",
+        "/home/yongki/dev_ws/install/amz_global/lib/python3.8/site-packages",
+        "/opt/ros/foxy/lib/python3.8/site-packages"
+    ],
+    "files.associations": {
+        "thread": "cpp",
+        "array": "cpp",
+        "ostream": "cpp",
+        "*.tcc": "cpp",
+        "deque": "cpp",
+        "list": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp",
+        "system_error": "cpp"
+    }
+}

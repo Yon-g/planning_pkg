@@ -63,6 +63,7 @@ STOPLINE_LIST = [[0,0],
                  [0,0]]
 
 TUCK = [302567.6975462873,4123753.974137217]
+BEFORE_UTURN = [302659.76291149075,4123842.468191383]
 
 # 평행주차
 num_points = 10 # 평행주차 점 몇개찍을지.
@@ -1476,4 +1477,8 @@ def bagjituck(self):
     if dist_with_tuck < 10:
         self.c_serial_mode.data = SERIAL_SLOW
     else:
-        self.c_serial_mode.data = SERIAL_NOMAL
+        dist_with_before_uturn = math.sqrt((c_utm[0]-BEFORE_UTURN[0])**2+(c_utm[1]-BEFORE_UTURN[1])**2)
+        if dist_with_before_uturn < 30 :
+            self.c_serial_mode.data = SERIAL_SLOW
+        else:
+            self.c_serial_mode.data = SERIAL_NOMAL

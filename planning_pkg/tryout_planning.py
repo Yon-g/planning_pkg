@@ -3,7 +3,7 @@
 #ros2 모듈
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
+from rclpy.qos import QoSProfile
 
 from std_msgs.msg import Float64MultiArray, Float64, Int16, Int32MultiArray,Bool
 from geometry_msgs.msg import PointStamped
@@ -101,9 +101,7 @@ class Planning(Node):
 
     def __init__(self):
         super().__init__('final', namespace='/Planning/core')
-        qos_profile_action = QoSProfile(history=QoSHistoryPolicy.KEEP_LAST,depth=1,reliability=QoSReliabilityPolicy.BEST_EFFORT,durability=QoSDurabilityPolicy.VOLATILE)
-        qos_profile_sensor = QoSProfile(history=QoSHistoryPolicy.KEEP_LAST,depth=5,reliability=QoSReliabilityPolicy.BEST_EFFORT,durability=QoSDurabilityPolicy.VOLATILE)
-
+        qosprofile = QoSProfile(depth=1)
         """ 데이터 객체 생성 """
         self.lidar = data.Lidar()
         self.vision = data.Vision()
@@ -111,38 +109,38 @@ class Planning(Node):
         self.control = data.Control()
         #-------------------------------------Pub and Sub-----------------------------------------
 
-        self.lo_path_pub = self.create_publisher(Float64MultiArray,'/Planning/local_path', qos_profile_sensor) #로컬패스
-        self.lo_yaw_pub = self.create_publisher(Float64MultiArray,'/Planning/path_yaw', qos_profile_sensor) #로컬yaw 
-        self.lo_k_pub = self.create_publisher(Float64MultiArray,'/Planning/curvature', qos_profile_sensor) #로컬k
-        self.c_serial_mode_pub = self.create_publisher(Int16,'/Planning/control_switch', qos_profile_action) # 시리얼 번호
-        self.mission_flag_pub = self.create_publisher(Int16,'/Planning/mission',qos_profile_action) # 미션번호
+        self.lo_path_pub = self.create_publisher(Float64MultiArray,'/Planning/local_path', qosprofile) #로컬패스
+        self.lo_yaw_pub = self.create_publisher(Float64MultiArray,'/Planning/path_yaw', qosprofile) #로컬yaw 
+        self.lo_k_pub = self.create_publisher(Float64MultiArray,'/Planning/curvature', qosprofile) #로컬k
+        self.c_serial_mode_pub = self.create_publisher(Int16,'/Planning/control_switch', qosprofile) # 시리얼 번호
+        self.mission_flag_pub = self.create_publisher(Int16,'/Planning/mission',qosprofile) # 미션번호
 
-        self.v_flag_done_pub = self.create_publisher(Int16,'/Planning/deli_flag',qos_profile_sensor) # flag mission done check sub 배달
-        self.car_yaw_pub = self.create_publisher(Float64,'/Planning/heading',qos_profile_sensor) # 터널에서 차량 heading publishe
+        self.v_flag_done_pub = self.create_publisher(Int16,'/Planning/deli_flag',qosprofile) # flag mission done check sub 배달
+        self.car_yaw_pub = self.create_publisher(Float64,'/Planning/heading',qosprofile) # 터널에서 차량 heading publishe
 
         """ Local """
-        self.c_utm_sub = self.create_subscription(PointStamped,'/Local/utm',self.local.lo_c_UTM_callback,qos_profile_sensor) # utm sub
-        self.c_yaw_sub = self.create_subscription(Float64,'/Local/heading',self.local.lo_c_yaw_callback,qos_profile_sensor)  # yaw sub
+        self.c_utm_sub = self.create_subscription(PointStamped,'/Local/utm',self.local.lo_c_UTM_callback,qosprofile) # utm sub
+        self.c_yaw_sub = self.create_subscription(Float64,'/Local/heading',self.local.lo_c_yaw_callback,qosprofile)  # yaw sub
 
         """ Lidar """
-        self.l_dynamic_sub = self.create_subscription(Bool,'/LiDAR/dynamic_stop',self.lidar.dynamic_callback,qos_profile_action) # 동적 sub
-        self.l_small_object_sub = self.create_subscription(Float64MultiArray,'/Planning/small_object_UTM',self.lidar.cone_UTM_callback,qos_profile_sensor) # 정적 소형 sub
-        self.l_bigObject_sub = self.create_subscription(Float64MultiArray,'/Planning/big_object_UTM',self.lidar.bigcon_callback,qos_profile_sensor)
-        self.prl_point_UTM_sub = self.create_subscription(Float64MultiArray, '/Planning/prl_points', self.lidar.prl_point_UTM_callback,qos_profile_sensor) #평행주차 점 sub
-        self.u_turn_point_sub = self.create_subscription(Float64MultiArray,'/Planning/u_turn_point',self.lidar.u_turn_UTM_callback,qos_profile_sensor)
+        self.l_dynamic_sub = self.create_subscription(Bool,'/LiDAR/dynamic_stop',self.lidar.dynamic_callback,qosprofile) # 동적 sub
+        self.l_small_object_sub = self.create_subscription(Float64MultiArray,'/Planning/small_object_UTM',self.lidar.cone_UTM_callback,qosprofile) # 정적 소형 sub
+        self.l_bigObject_sub = self.create_subscription(Float64MultiArray,'/Planning/big_object_UTM',self.lidar.bigcon_callback,qosprofile)
+        self.prl_point_UTM_sub = self.create_subscription(Float64MultiArray, '/Planning/prl_points', self.lidar.prl_point_UTM_callback,qosprofile) #평행주차 점 sub
+        self.u_turn_point_sub = self.create_subscription(Float64MultiArray,'/Planning/u_turn_point',self.lidar.u_turn_UTM_callback,qosprofile)
 
-        self.tunnel_small_sub = self.create_subscription(Float64MultiArray,'/LiDAR/object_cen', self.lidar.tunnel_small_callback,qos_profile_sensor)
-        self.deli_point_UTM_sub = self.create_subscription(Float64MultiArray, '/Planning/deli_UTM', self.lidar.deli_point_UTM_callback ,qos_profile_sensor) #배달 point sub
-        self.prl_stop_sub = self.create_subscription(Bool, '/LiDAR/park_ok2', self.lidar.prl_stop_callback,qos_profile_action) #평행주차 점 sub
+        self.tunnel_small_sub = self.create_subscription(Float64MultiArray,'/LiDAR/object_cen', self.lidar.tunnel_small_callback,qosprofile)
+        self.deli_point_UTM_sub = self.create_subscription(Float64MultiArray, '/Planning/deli_UTM', self.lidar.deli_point_UTM_callback ,qosprofile) #배달 point sub
+        self.prl_stop_sub = self.create_subscription(Bool, '/LiDAR/park_ok2', self.lidar.prl_stop_callback,qosprofile) #평행주차 점 sub
 
-        self.tunnel_wall_sub = self.create_subscription(Float64MultiArray, '/LiDAR/wall_dist', self.lidar.ternnel_wall_callback,qos_profile_sensor) # 터널 벽 sub
-        self.tunnel_lane_sub = self.create_subscription(Float64MultiArray, '/LiDAR/lane', self.lidar.ternnel_lane_callback,qos_profile_sensor) # 차선 점 sub
-        self.tunnel_ceiling_sub = self.create_subscription(Float64MultiArray, '/LiDAR/ceiling_end', self.lidar.ternnel_ceiling_callback,qos_profile_sensor) # 천장 sub
-        self.tunnel_center_sub = self.create_subscription(Float64MultiArray, '/LiDAR/center_lane', self.lidar.ternnel_center_callback,qos_profile_sensor) # 차선 중앙점 sub
+        self.tunnel_wall_sub = self.create_subscription(Float64MultiArray, '/LiDAR/wall_dist', self.lidar.ternnel_wall_callback,qosprofile) # 터널 벽 sub
+        self.tunnel_lane_sub = self.create_subscription(Float64MultiArray, '/LiDAR/lane', self.lidar.ternnel_lane_callback,qosprofile) # 차선 점 sub
+        self.tunnel_ceiling_sub = self.create_subscription(Float64MultiArray, '/LiDAR/ceiling_end', self.lidar.ternnel_ceiling_callback,qosprofile) # 천장 sub
+        self.tunnel_center_sub = self.create_subscription(Float64MultiArray, '/LiDAR/center_lane', self.lidar.ternnel_center_callback,qosprofile) # 차선 중앙점 sub
 
         """ Vision """
-        self.v_traffic_light_sub = self.create_subscription(Int32MultiArray, '/Vision/traffic_sign',self.vision.v_traffic_light_callback,qos_profile_sensor) #traffic light sub
-        self.dis_stopline = self.create_subscription(Float64, '/Vision/stopline', self.vision.stopline_callback,qos_profile_action) # 정지선까지의 거리 sub 용승test
+        self.v_traffic_light_sub = self.create_subscription(Int32MultiArray, '/Vision/traffic_sign',self.vision.v_traffic_light_callback,qosprofile) #traffic light sub
+        self.dis_stopline = self.create_subscription(Float64, '/Vision/stopline', self.vision.stopline_callback,qosprofile) # 정지선까지의 거리 sub 용승test
         
         """ Control """
         #-----------------------------------------------------------------------------------------

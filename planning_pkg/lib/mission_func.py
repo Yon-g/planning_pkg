@@ -19,11 +19,11 @@ A_DELI_TXT_ADDRESS = CURRENT_DIRECTORY + "/A_flag.txt"
 p_cnt = 400 #3차보간 쓸 좌표 개수
 PATH_TERM = 0.05
 LOCAL_P = 300 #pub할 좌표 개수
+SERIAL_E_STOP = -1 #E-STOP
 SERIAL_NOMAL = 0 #일반주행
 SERIAL_SLOW = 1 #천천히 가기
-SERIAL_E_STOP = 2 #E-STOP
-SERIAL_REVERSE = 3 #엔코더 
-SERIAL_ACCELERATION = 4 #고속 주행 가속 
+SERIAL_ACCELERATION = 2 #중속 주행
+SERIAL_REVERSE = 100 #후진
 SLOPE_RANGE = 40 # 40 *0.05 = 2m
 #정적 대형 상수
 B_OBJ_ERROR =  0.8 #0.8,2.0

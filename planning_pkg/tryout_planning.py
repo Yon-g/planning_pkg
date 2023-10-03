@@ -338,7 +338,7 @@ class Planning(Node):
         print('현재 진행중인 미션 인덱스 :',self.mission_ind)
         print('현재 진행중인 미션 : ',MISSION_DIC[MISSION_LIST[self.mission_ind]])
         if self.mission_num.data == 0:
-            self.c_serial_mode.data = 0
+            self.c_serial_mode.data = 2
 
         elif self.mission_num.data == 7:
             mf.delivery_ready( self,self.local.c_UTM,self.lidar.deli_flag_UTM )
@@ -381,7 +381,7 @@ class Planning(Node):
             #방지턱
             mf.bagjituck(self)
         elif self.mission_num.data == 26:
-            self.c_serial_mode.data = 4
+            self.c_serial_mode.data = 2
     
         if not self.create_mission_path: #미션 내에서 경로를 만들지 않았을 경우 mission_txt의 글로벌 따라감
             self.l_path.data,self.l_yaw.data,self.l_k.data = mf.create_local_path(self.local.c_UTM,

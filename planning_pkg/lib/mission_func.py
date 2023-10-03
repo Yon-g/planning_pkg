@@ -23,6 +23,7 @@ SERIAL_E_STOP = -1 #E-STOP
 SERIAL_NOMAL = 0 #일반주행
 SERIAL_SLOW = 1 #천천히 가기
 SERIAL_ACCELERATION = 2 #중속 주행
+SERIAL_DILEMMA = 3
 SERIAL_REVERSE = 100 #후진
 SLOPE_RANGE = 40 # 40 *0.05 = 2m
 #정적 대형 상수
@@ -32,7 +33,7 @@ B_OBJ_ERROR =  0.8 #0.8,2.0
 STOP_DISTANCE_PRE = 10 # 정지선 탐지시 감속할 거리.
 STOP_DISTANCE = 4 # 정지선 탐지시 멈출 거리. (n 미터 앞에서 정지)
 WAIT_TIME = 3.2 # 정지 대기 시간
-LATE_DIS = 3 # 최소 제동 거리
+LATE_DIS = 4 # 최소 제동 거리
 
 STOPLINE_LIST = [[0,0],
                  [0,0],
@@ -70,6 +71,7 @@ num_points = 10 # 평행주차 점 몇개찍을지.
 num_new_points = 300  # new_point 갯수 / 다은_path
 ds = 0.5
 STOP_TIME = 2
+PARKING_TIME = 10
 
 # 터널
 FIND_NUM = 4 # head 경로 몇개 찍을지.
@@ -219,6 +221,7 @@ def delivery_ready(self,car_utm,f_flag_utm):
     
     if self.DBUG == True:
         print("-"*20)
+        print("시간 :",(time.time() - self.start_t))
         print(" A 표지판의 번호: ", self.Deli_flag)
         print(" 표지판까지의 거리 : ", dist_f)
         print(" 기다렸냐?: ", self.wait)
@@ -242,70 +245,80 @@ def fusion_deli_B(self, car_utm):
         self.c_serial_mode.data = SERIAL_NOMAL
 
     if not self.lidar.deli_flag_UTM == None and self.fusion_state.data == 1:                  # flag 정보 들어오면 시작
-        print(" 인지가 표지판 줌")
 
         for i in range(len(self.lidar.deli_flag_UTM)):             # 들어온 Flag 정보중에 target flag 정보가 있는지
+            # print(self.lidar.deli_flag_UTM)
+            # print(self.B_flag)
 
             if self.lidar.deli_flag_UTM[i] == self.B_flag:      # 있다면 맵의 로컬패스를 변경하고 제일 가까운 좌표를 선정
 
                 self.path_flag = self.local.g_kd_tree.query((self.lidar.deli_flag_UTM[i-2],self.lidar.deli_flag_UTM[i-1]))   # 가까운 좌표 찾기
-                
-                self.taget_flag = True                                             # taget flag가 있음
-                break             # 현재 정보 초기화
+                # print(self.path_flag)
+                if self.path_flag[0] < 3.0:
+                    self.taget_flag = True                                             # taget flag가 있음
+                    self.re_path_flag = self.path_flag
+                    break             # 현재 정보 초기화
+                else:
+                    self.path_flag = self.re_path_flag
+                    pass
             else:
                 pass                
     else:
         print(" 인지가 표지판 안줌")
+        
     
     if self.taget_flag and self.fusion_state.data == 1:              # taget flag가 있을때 그때 제일 가까운 좌표와 현재 차량의 거리 계산 
         dist_f = abs(np.hypot((self.local.g_path[self.path_flag[1],0]-car_utm[0]),(self.local.g_path[self.path_flag[1],1]-car_utm[1])))
-        if dist_f < 0.6:
+        if dist_f < 0.8: #kcity : 0.6
             if self.wait == False:
                 # 0.5m 안쪽에서 정지
                     self.start_t = time.time()
                     self.wait = True                          #wait 상태여부 확인
                     self.c_serial_mode.data = SERIAL_E_STOP               #control_fullbreak 모드
                     self.DBUG = True
-        else:
-            self.DBUG = False    
+                    if not self.map_change:
+                        goat_map = self.local.map_dic[str(self.mission_ind+1)+'.txt']
+                        deli_B_g_path = goat_map.g_path
+                        deli_B_g_yaw = goat_map.g_yaw
+                        deli_B_g_k = goat_map.g_k
+                        deli_B_g_kd_tree = goat_map.g_kd_tree
+                        
+                        flag_xy = self.local.g_path[self.path_flag[1]]
+                        near_g_path_ind = self.local.g_kd_tree.query(flag_xy)[1] + 50
+                        near_goat_path_ind = deli_B_g_kd_tree.query(flag_xy)[1] +200
+
+                        before_g_path = self.local.g_path[near_g_path_ind-10:near_g_path_ind,:]
+                        before2_g_path = deli_B_g_path[near_goat_path_ind:near_goat_path_ind+10,:]
+
+                        before_path = np.vstack((before_g_path,before2_g_path))
+                        d_path,d_yaw,d_k = generate_target_course(before_path)
+
+                        tmp1_g_path = self.local.g_path[:near_g_path_ind-10,:]
+                        tmp2_g_path = deli_B_g_path[near_goat_path_ind+10:,:]
+
+                        tmp1_g_yaw = self.local.g_yaw[:near_g_path_ind-10]
+                        tmp2_g_yaw = deli_B_g_yaw[near_goat_path_ind+10:]
+
+                        tmp1_g_k = self.local.g_k[:near_g_path_ind-10]
+                        tmp2_g_k = deli_B_g_k[near_goat_path_ind+10:]
+                        
+                        self.local.g_path = np.vstack((tmp1_g_path,d_path,tmp2_g_path))
+                        self.local.g_yaw = np.concatenate((tmp1_g_yaw,d_yaw,tmp2_g_yaw))
+                        self.local.g_k = np.concatenate((tmp1_g_k,d_k,tmp2_g_k))
+                        self.local.g_kd_tree = KDTree(self.local.g_path)
+                        self.map_change = True
     
-        if (self.wait == True) and ((time.time() - self.start_t) > 8.0):
-            self.taget_flag = False
-            self.wait = False
-            self.c_serial_mode.data = SERIAL_ACCELERATION      # 감속 주행
-            self.fusion_state.data = 0                  # 배달 B완료
+        if (self.wait == True):
+            print("맵변경 했어??? : ",self.map_change)
+            print("경과시간: ",(time.time() - self.start_t))
+            if ((time.time() - self.start_t) > 8.0):
+                self.taget_flag = False
+                self.wait = False
+                self.c_serial_mode.data = SERIAL_ACCELERATION      # 감속 주행
+                self.fusion_state.data = 0                  # 배달 B완료
         else:
-            if not self.map_change:
-                goat_map = self.local.map_dic[str(self.mission_ind+1)+'.txt']
-                deli_B_g_path = goat_map.g_path
-                deli_B_g_yaw = goat_map.g_yaw
-                deli_B_g_k = goat_map.g_k
-                deli_B_g_kd_tree = goat_map.g_kd_tree
-                
-                flag_xy = self.local.g_path[self.path_flag[1]]
-                near_g_path_ind = self.local.g_kd_tree.query(flag_xy)[1] + 50
-                near_goat_path_ind = deli_B_g_kd_tree.query(flag_xy)[1] +200
-
-                before_g_path = self.local.g_path[near_g_path_ind-10:near_g_path_ind,:]
-                before2_g_path = deli_B_g_path[near_goat_path_ind:near_goat_path_ind+10,:]
-
-                before_path = np.vstack((before_g_path,before2_g_path))
-                d_path,d_yaw,d_k = generate_target_course(before_path)
-
-                tmp1_g_path = self.local.g_path[:near_g_path_ind-10,:]
-                tmp2_g_path = deli_B_g_path[near_goat_path_ind+10:,:]
-
-                tmp1_g_yaw = self.local.g_yaw[:near_g_path_ind-10]
-                tmp2_g_yaw = deli_B_g_yaw[near_goat_path_ind+10:]
-
-                tmp1_g_k = self.local.g_k[:near_g_path_ind-10]
-                tmp2_g_k = deli_B_g_k[near_goat_path_ind+10:]
-                
-                self.local.g_path = np.vstack((tmp1_g_path,d_path,tmp2_g_path))
-                self.local.g_yaw = np.concatenate((tmp1_g_yaw,d_yaw,tmp2_g_yaw))
-                self.local.g_k = np.concatenate((tmp1_g_k,d_k,tmp2_g_k))
-                self.local.g_kd_tree = KDTree(self.local.g_path)
-                self.map_change = True
+            pass
+            
         
     if self.DBUG == True:
             print('-'*20)
@@ -366,7 +379,7 @@ def create_yongseung_path(x1, y1, g_path, prl_R1, prl_R2, offset_D, offset_short
         direction_vector = lat_point - parking_center_point
         normalized_direction_vector = direction_vector / np.linalg.norm(direction_vector) # 이것이 단위벡터
         offset_vector = np.dot(np.array([[0, -1], [1, 0]]), normalized_direction_vector)        
-        parking_offset_point = parking_center_point + (offset_D) * offset_vector  - (offset_short) * direction_vector # 오프셋 점찍음
+        parking_offset_point = parking_center_point + (offset_D) * offset_vector  + (offset_short) * direction_vector # 오프셋 점찍음
 
         # 1번 점.
         point_1 = parking_offset_point + (prl_R1) * normalized_direction_vector # 
@@ -397,7 +410,7 @@ def create_yongseung_path(x1, y1, g_path, prl_R1, prl_R2, offset_D, offset_short
         c2_fin_angle = rad_21 - np.pi/3
 
         #원방 만들기
-        prl_path_2 = points_on_circle_arc(prl_R2, point_2, c2_st_angle, c2_fin_angle, num_points)[::-6]
+        prl_path_2 = points_on_circle_arc(prl_R2, point_2, c2_st_angle, c2_fin_angle, num_points)[::-4]
         prl_path_1 = points_on_circle_arc(prl_R1, point_1, c1_st_angle, c1_fin_angle, num_points+1)[:-1, :][::-1]
     
         # 정지 이후 예비 경로 만들기
@@ -473,34 +486,42 @@ def prl_mission_func(self,local,lidar,s_m):
                 self.create_mission_path = True
                 s_m.data = SERIAL_REVERSE
                 dis = math.sqrt((self.l_path.data[0] - self.prl_fin_point[0])**2 + (self.l_path.data[1] - self.prl_fin_point[1])**2)
-                if dis <= 2.9:
+                # if dis <= 0.2:
+                if dis <= 1.25:
                     self.finish_path_2 = True
 
             elif self.finish_path_2:
-                print('주차 완료. 탈출경로 생성 중...')
                 s_m.data = SERIAL_E_STOP
-                # escape_path = create_out_path(local.g_path, self.prl_st_point, self.prl_fin_point, self.esc_D)
-                
-                # ------------------------ 아웃패스 수정 중 -------------------------------------
-                map2 = local.map_dic[str(self.mission_ind+1)+'.txt']
-                map2_g_path = map2.g_path
-                escape_path, near_ind = create_out_path(map2_g_path, self.prl_st_point, self.prl_fin_point, self.esc_D)
-                # ------------------------ 아웃패스 수정 중 -------------------------------------
-                self.out_nearest_index = map2_g_path[near_ind]
-                self.esc_path, self.esc_yaw, self.esc_k = generate_target_course(escape_path)
-                self.esc_tree = KDTree(escape_path)
-
-                if not self.time_check:
+                print('주차 완료. 탈출경로 생성 중...')
+                if not self.time_check_1:
                     print('타임 췤')
                     self.prl_time = time.time()
-                    self.time_check = True
+                    self.time_check_1 = True
+                elif (time.time() - self.prl_time) > 3: 
+                    self.stop_sign = True
+        
+                # escape_path = create_out_path(local.g_path, self.prl_st_point, self.prl_fin_point, self.esc_D)
+                if self.stop_sign:
+                    # ------------------------ 아웃패스 수정 중 -------------------------------------
+                    map2 = local.map_dic[str(self.mission_ind+1)+'.txt']
+                    map2_g_path = map2.g_path
+                    escape_path, near_ind = create_out_path(map2_g_path, self.prl_st_point, self.prl_fin_point, self.esc_D)
+                    # ------------------------ 아웃패스 수정 중 -------------------------------------
+                    self.out_nearest_index = map2_g_path[near_ind]
+                    self.esc_path, self.esc_yaw, self.esc_k = generate_target_course(escape_path)
+                    self.esc_tree = KDTree(self.esc_path)
 
-                elif (time.time() - self.prl_time) > STOP_TIME:
-                    self.create_mission_path = True
-                    self.esc_path_ready = True
-                    self.finish_path_2 = False
-                    self.ready_path_4 = False
-                    self.time_check = False
+                    if not self.time_check:
+                        print('타임 췤')
+                        self.prl_time = time.time()
+                        self.time_check = True
+
+                    elif (time.time() - self.prl_time) > 7:
+                        self.create_mission_path = True
+                        self.esc_path_ready = True
+                        self.finish_path_2 = False
+                        self.ready_path_4 = False
+                        self.time_check = False
 
         elif self.esc_path_ready:
             print('탈출 경로 다만듬')
@@ -563,8 +584,8 @@ def stopline_straight(self, c_UTM, tf_light, s_m):
         elif STOP_DISTANCE <= line_dis < STOP_DISTANCE_PRE:
             if tf_light[3] == 1:
                 s_m.data = SERIAL_NOMAL
-        else:
-            s_m.data = SERIAL_SLOW
+            else:
+                s_m.data = SERIAL_SLOW
     else:
         s_m.data = SERIAL_NOMAL
         
@@ -588,7 +609,7 @@ def stopline_no_light(self, c_UTM, tf_light, s_m):
                     self.stop_ing = True
                     self.time_check = False
             elif STOP_DISTANCE <= line_dis < STOP_DISTANCE_PRE:
-                s_m.data = SERIAL_SLOW
+                s_m.data = SERIAL_NOMAL # 1003 stopline change SERIAL_SLOW
                 print(" 감속중 ...")
             else:
                 s_m.data = SERIAL_NOMAL
@@ -879,7 +900,7 @@ def bbangbbang_path(self,local,lidar): # g_path -> global_path.g_p,global_path.g
             fst_index -= 80 #기준 2m
             s_, sed_index = local.g_kd_tree2.query(local.g_path[fst_index])
 
-            smooth_ind = 80 #간격 2m
+            smooth_ind = 100 #간격 2m
 
             tmp_path1 = local.g_path[fst_index-smooth_ind-5:fst_index-smooth_ind,:] # 장애물로부터 4m 50cm 전에서 4m까지
             tmp_path2 = local.g_path2[sed_index+smooth_ind:sed_index+smooth_ind+5,:]# 
@@ -942,7 +963,7 @@ def bbangbbang_path(self,local,lidar): # g_path -> global_path.g_p,global_path.g
             fst_index -= 30 #기준 3m
             s_, sed_index = local.g_kd_tree3.query(local.g_path[fst_index])
 
-            smooth_ind = 80 #간격 2m
+            smooth_ind = 75 #간격 2m
 
             tmp_path1 = local.g_path[fst_index-smooth_ind-5:fst_index-smooth_ind,:]
             tmp_path2 = local.g_path3[sed_index+smooth_ind:sed_index+smooth_ind+5,:]

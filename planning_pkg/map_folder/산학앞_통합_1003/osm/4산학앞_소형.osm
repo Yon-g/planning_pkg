@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version='0.6' generator='JOSM'>
+  <node id='-2266687' action='modify' visible='true' lat='36.76047235871' lon='127.27765855264' />
+  <node id='-2266688' action='modify' visible='true' lat='36.76029320933' lon='127.27787867669' />
+  <node id='-2266690' action='modify' visible='true' lat='36.76029103662' lon='127.27788228835' />
+  <node id='-2266691' action='modify' visible='true' lat='36.76028906477' lon='127.27788639494' />
+  <node id='-2266692' action='modify' visible='true' lat='36.76028719231' lon='127.27789050092' />
+  <node id='-2266693' action='modify' visible='true' lat='36.76028571697' lon='127.27789448039' />
+  <node id='-2266694' action='modify' visible='true' lat='36.76027765325' lon='127.27791661531' />
+  <node id='-2266695' action='modify' visible='true' lat='36.76027598057' lon='127.27792096822' />
+  <node id='-2266696' action='modify' visible='true' lat='36.7602745018' lon='127.27792407918' />
+  <node id='-2266697' action='modify' visible='true' lat='36.76027173523' lon='127.27792831474' />
+  <node id='-2266698' action='modify' visible='true' lat='36.76025493067' lon='127.27795211633' />
+  <node id='-2266699' action='modify' visible='true' lat='36.76020369711' lon='127.27801719794' />
+  <way id='-958578' action='modify' visible='true'>
+    <nd ref='-2266687' />
+    <nd ref='-2266688' />
+    <nd ref='-2266690' />
+    <nd ref='-2266691' />
+    <nd ref='-2266692' />
+    <nd ref='-2266693' />
+    <nd ref='-2266694' />
+    <nd ref='-2266695' />
+    <nd ref='-2266696' />
+    <nd ref='-2266697' />
+    <nd ref='-2266698' />
+    <nd ref='-2266699' />
+  </way>
+</osm>

@@ -25,8 +25,8 @@ except ImportError:
     raise
 
 #미션 리스트
-MISSION_LIST = [0,0,7,26,11,0,23,22,0,21,28,12,21,9,9,22,29,22,30,23,27,21,0,21,0,26,14,0] # final final final final final final final final
-
+#MISSION_LIST = [0,0,7,26,11,0,23,22,0,21,28,12,21,9,9,22,29,22,30,23,27,21,0,21,0,26,14,0] # final final final final final final final final
+MISSION_LIST = [0,14,0]
 #미션 딕셔너리
 MISSION_DIC = {0:'고속',7:'배달A',9:'배달B',11:'정적소형',12:'정적대형',14:'평행주차',15:'터널',16:'유턴',17:'터널동적',21:'정지선 직진',22:'정지선 좌회전',23:'정지선 우회전',24:'감속구간',25:'방지턱',26:'중속',27:'중가속',28:'대형전가속',29:'배달후좌회전',30:'배달후좌회전후좌회전후고속'}
 
@@ -150,8 +150,10 @@ class Planning(Node):
         self.create_mission_path = False # 미션 안에서 local_path를 새로 만든 경우 기존 경로 생성 방지
 
         """배달미션 임시 변수"""
+
         #302491.7248856042,4123762.395569992 kcity flag A 좌표
         self.delivery_A_stop_point = [302491.7248856042,4123762.395569992]
+
         self.DBUG = True
         self.wait = False
         self.turn = False
@@ -170,7 +172,7 @@ class Planning(Node):
         self.deli_B_start = False
         self.chang_g_path_kd = None
         self.path_flag = None
-
+        self.re_path_flag = None
         self.map_change = False
         self.fusion_state.data = 1
 
@@ -267,12 +269,21 @@ class Planning(Node):
         self.prl_yaw = None
         self.prl_k = None
         self.prl_tree = None
-        self.prl_R1 = 3.0 # 작은원 (안쪽)            튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
-        self.prl_R2 = 3.5 # 큰원 (바깥쪽)          튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!             
-        self.offset_D = 1.5 # 스타트점 세로로 offset하는 값       튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
-        self.offset_short = 0 # 가로로 띄움      쓰지마ㅋㅋ
-        self.offset_gap = 1.1 # 호 두개 띄움     튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
-        self.esc_D = 6.5 # 탈출경로 만드는 거리 (m)  튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # self.prl_R1 = 1.8 # 작은원 (안쪽)            튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # self.prl_R2 = 3.7 # 큰원 (바깥쪽)          튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!             
+        # self.offset_D = 0.3 # 스타트점 세로로 offset하는 값       튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # self.offset_short = 0.43 # 가로로 띄움      쓰지마ㅋㅋ
+        # self.offset_gap = 0.8 # 호 두개 띄움     튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # self.esc_D = 1.5 # 탈출경로 만드는 거리 (m)  튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
+        #crown
+        self.prl_R1 = 2.0 # 작은원 (안쪽)            튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+        self.prl_R2 = 3.3 # 큰원 (바깥쪽)          튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!             
+        self.offset_D = 0.3 # 스타트점 세로로 offset하는 값       튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+        self.offset_short = 0.08 # 가로로 띄움      쓰지마ㅋㅋ
+        self.offset_gap = 0.7 # 호 두개 띄움     튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+        self.esc_D = 1.5 # 탈출경로 만드는 거리 (m)  튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
         self.for_stop_D = 15 # 정지 예비 포인트 찍을 거리 (m)
         self.time_check = False
@@ -299,6 +310,8 @@ class Planning(Node):
         self.esc_path_ready = False
         self.finish_esc_path = False
         self.out_nearest_index = None
+        self.time_check_1 = False
+        self.stop_sign = False
         
         """메세지 선언"""
         self.l_path = Float64MultiArray() # 경로
@@ -338,7 +351,7 @@ class Planning(Node):
         print('현재 진행중인 미션 인덱스 :',self.mission_ind)
         print('현재 진행중인 미션 : ',MISSION_DIC[MISSION_LIST[self.mission_ind]])
         if self.mission_num.data == 0:
-            self.c_serial_mode.data = 0
+            self.c_serial_mode.data = 2
 
         elif self.mission_num.data == 7:
             mf.delivery_ready( self,self.local.c_UTM,self.lidar.deli_flag_UTM )
@@ -348,6 +361,7 @@ class Planning(Node):
             #mf.delivery_throw( self, self.local.c_UTM, self.lidar.flagxy, self.vision.v_flag )
 
         elif self.mission_num.data == 11:
+            self.c_serial_mode.data = 0
             mf.small_object_fuc(self,self.local,self.lidar,self.c_serial_mode)
 
         elif self.mission_num.data == 12:

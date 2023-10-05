@@ -3,7 +3,7 @@
 #ros2 모듈
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile
+from rclpy.qos import QoSProfile,qos_profile_sensor_data
 
 from std_msgs.msg import Float64MultiArray, Float64, Int16, Int32MultiArray,Bool
 from geometry_msgs.msg import PointStamped
@@ -25,15 +25,15 @@ except ImportError:
     raise
 
 #미션 리스트
-#MISSION_LIST = [0,0,7,26,11,0,23,22,0,21,28,12,21,9,9,22,29,22,30,23,27,21,0,21,0,26,14,0] # final final final final final final final final
-MISSION_LIST = [0,14,0]
+# MISSION_LIST = [0,0,7,31,11,0,23,22,0,21,28,12,21,9,9,22,29,22,30,23,27,21,0,21,0,26,14,0] # final final final final final final final final
+MISSION_LIST = [0,26,11,0]
 #미션 딕셔너리
-MISSION_DIC = {0:'고속',7:'배달A',9:'배달B',11:'정적소형',12:'정적대형',14:'평행주차',15:'터널',16:'유턴',17:'터널동적',21:'정지선 직진',22:'정지선 좌회전',23:'정지선 우회전',24:'감속구간',25:'방지턱',26:'중속',27:'중가속',28:'대형전가속',29:'배달후좌회전',30:'배달후좌회전후좌회전후고속'}
+MISSION_DIC = {0:'고속',7:'배달A',9:'배달B',11:'정적소형',12:'정적대형',14:'평행주차',15:'터널',16:'유턴',17:'터널동적',21:'정지선 직진',22:'정지선 좌회전',23:'정지선 우회전',24:'감속구간',25:'방지턱',26:'중속',27:'중가속',28:'대형전가속',29:'배달후좌회전',30:'배달후좌회전후좌회전후고속',31:'배달A후 좌회전'}
 
 #맵 가져올 경로
 CURRENT_FILE_PATH = os.path.abspath(__file__)
 CURRENT_DIRECTORY = os.path.dirname(CURRENT_FILE_PATH)
-GLOBAL_UTM_TXT_ADDRESS = CURRENT_DIRECTORY + "/map_final/"
+GLOBAL_UTM_TXT_ADDRESS = CURRENT_DIRECTORY + "/map_folder/small/"
 
 #plt 출력 여부
 ANI_PRINT = False
@@ -119,8 +119,8 @@ class Planning(Node):
         self.car_yaw_pub = self.create_publisher(Float64,'/Planning/heading',qosprofile) # 터널에서 차량 heading publishe
 
         """ Local """
-        self.c_utm_sub = self.create_subscription(PointStamped,'/Local/utm',self.local.lo_c_UTM_callback,qosprofile) # utm sub
-        self.c_yaw_sub = self.create_subscription(Float64,'/Local/heading',self.local.lo_c_yaw_callback,qosprofile)  # yaw sub
+        self.c_utm_sub = self.create_subscription(PointStamped,'/Local/utm',self.local.lo_c_UTM_callback,qos_profile_sensor_data) # utm sub
+        self.c_yaw_sub = self.create_subscription(Float64,'/Local/heading',self.local.lo_c_yaw_callback,qos_profile_sensor_data)  # yaw sub
 
         """ Lidar """
         self.l_dynamic_sub = self.create_subscription(Bool,'/LiDAR/dynamic_stop',self.lidar.dynamic_callback,qosprofile) # 동적 sub
@@ -276,10 +276,19 @@ class Planning(Node):
         # self.offset_gap = 0.8 # 호 두개 띄움     튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
         # self.esc_D = 1.5 # 탈출경로 만드는 거리 (m)  튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
         
-        #crown
+        # #crown
+        # self.prl_R1 = 2.0 # 작은원 (안쪽)            튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # self.prl_R2 = 3.6 # 큰원 (바깥쪽)          튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!             
+        # self.offset_D = 0.8 # 스타트점 세로로 offset하는 값       튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # self.offset_short = 0.08 # 가로로 띄움      쓰지마ㅋㅋ
+        # self.offset_gap = 0.7 # 호 두개 띄움     튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # self.esc_D = 1.5 # 탈출경로 만드는 거리 (m)  튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+         #1005
         self.prl_R1 = 2.0 # 작은원 (안쪽)            튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
-        self.prl_R2 = 3.3 # 큰원 (바깥쪽)          튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!             
-        self.offset_D = 0.3 # 스타트점 세로로 offset하는 값       튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
+        self.prl_R2 = 3.6 # 큰원 (바깥쪽)          튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!             
+        self.offset_D = 0.6 # 스타트점 세로로 offset하는 값       튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
         self.offset_short = 0.08 # 가로로 띄움      쓰지마ㅋㅋ
         self.offset_gap = 0.7 # 호 두개 띄움     튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
         self.esc_D = 1.5 # 탈출경로 만드는 거리 (m)  튜닝필수!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -330,7 +339,6 @@ class Planning(Node):
         self.timer = self.create_timer(self.timer_period, self.planning)
 
     def planning(self):
-        t1 = time.time()
         self.create_mission_path = False
         if self.local.is_mission_complete(): # 미션이 끝나가는지? 끝나가면 True, 아직이면 False
             print("이번 미션 끝남")
@@ -351,17 +359,16 @@ class Planning(Node):
         print('현재 진행중인 미션 인덱스 :',self.mission_ind)
         print('현재 진행중인 미션 : ',MISSION_DIC[MISSION_LIST[self.mission_ind]])
         if self.mission_num.data == 0:
-            self.c_serial_mode.data = 2
+            self.c_serial_mode.data = 2 #CONTROL_SWITCH : ACCEL
 
         elif self.mission_num.data == 7:
             mf.delivery_ready( self,self.local.c_UTM,self.lidar.deli_flag_UTM )
 
         elif self.mission_num.data == 9:
             mf.fusion_deli_B(self, self.local.c_UTM)
-            #mf.delivery_throw( self, self.local.c_UTM, self.lidar.flagxy, self.vision.v_flag )
 
         elif self.mission_num.data == 11:
-            self.c_serial_mode.data = 0
+            self.c_serial_mode.data = 0 #CONTROL_SWITCH : NORMAL
             mf.small_object_fuc(self,self.local,self.lidar,self.c_serial_mode)
 
         elif self.mission_num.data == 12:
@@ -398,24 +405,26 @@ class Planning(Node):
 
         elif self.mission_num.data == 26:
             #중속
-            self.c_serial_mode.data = 2
+            self.c_serial_mode.data = 2 #CONTROL_SWITCH : ACCEL
 
         elif self.mission_num.data == 27:
             #중가속(우회전 후 가속)
-            self.c_serial_mode.data = 0
+            self.c_serial_mode.data = 0 #CONTROL_SWITCH : NORMAL
 
         elif self.mission_num.data == 28:
             #대형전가속
-            self.c_serial_mode.data = 0
+            self.c_serial_mode.data = 0 #CONTROL_SWITCH : NORMAL
 
         elif self.mission_num.data == 29:
             #배달후좌회전
-            self.c_serial_mode.data = 0
+            self.c_serial_mode.data = 0 #CONTROL_SWITCH : NORMAL
         
         elif self.mission_num.data == 30:
             #배달후좌회전후좌회전후 고속
-            self.c_serial_mode.data = 0
-    
+            self.c_serial_mode.data = 0 #CONTROL_SWITCH : NORMAL
+
+        elif self.mission_num.data == 31:
+            mf.stopline_no_light(self,self.local.c_UTM,self.vision.v_light,self.c_serial_mode)
     
         if not self.create_mission_path: #미션 내에서 경로를 만들지 않았을 경우 mission_txt의 글로벌 따라감
             self.l_path.data,self.l_yaw.data,self.l_k.data = mf.create_local_path(self.local.c_UTM,

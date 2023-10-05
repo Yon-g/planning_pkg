@@ -31,14 +31,14 @@ B_OBJ_ERROR =  0.8 #0.8,2.0
 
 # 정지선 상수
 STOP_DISTANCE_PRE = 10 # 정지선 탐지시 감속할 거리.
-STOP_DISTANCE = 4 # 정지선 탐지시 멈출 거리. (n 미터 앞에서 정지)
+STOP_DISTANCE = 4.5 # 정지선 탐지시 멈출 거리. (n 미터 앞에서 정지)
 WAIT_TIME = 3.2 # 정지 대기 시간
-LATE_DIS = 4 # 최소 제동 거리
+LATE_DIS = 4.5 # 최소 제동 거리
 
 STOPLINE_LIST = [[0,0],
                  [0,0],
                  [0,0],
-                 [0,0],
+                 [302497.52565663226,4123778.6443337323],
                  [0,0],
                  [0,0],
                  [302476.8019109962,4123845.641434414, 302487.2808855878,4123854.259636674],
@@ -487,7 +487,8 @@ def prl_mission_func(self,local,lidar,s_m):
                 s_m.data = SERIAL_REVERSE
                 dis = math.sqrt((self.l_path.data[0] - self.prl_fin_point[0])**2 + (self.l_path.data[1] - self.prl_fin_point[1])**2)
                 # if dis <= 0.2:
-                if dis <= 1.25:
+                # if dis <= 1.25:
+                if dis <= 1.28:
                     self.finish_path_2 = True
 
             elif self.finish_path_2:
@@ -546,9 +547,7 @@ def stopline_left(self, c_UTM, tf_light, s_m):
     print("-"*20)
     print(' 정지선까지 거리 :', line_dis)
     print(' 현재 신호는 ?? :', tf_light)
-    if not self.stop_ing:
-        if line_dis < LATE_DIS:
-            self.late_2_stop = True
+    
     if not self.late_2_stop:
         if line_dis < STOP_DISTANCE:
             if tf_light[2] == 1:
@@ -563,16 +562,17 @@ def stopline_left(self, c_UTM, tf_light, s_m):
             else:
                 s_m.data = SERIAL_SLOW
     else:
-        s_m.data = SERIAL_NOMAL
+        s_m.data = SERIAL_DILEMMA
 
+    if not self.stop_ing:
+        if line_dis < LATE_DIS:
+            self.late_2_stop = True
 def stopline_straight(self, c_UTM, tf_light, s_m):
     line_dis = math.sqrt((c_UTM[0] - STOPLINE_LIST[self.mission_ind][0])**2 + (c_UTM[1] - STOPLINE_LIST[self.mission_ind][1])**2)
     print("-"*20)
     print(' 정지선까지 거리 :', line_dis)
     print(' 현재 신호는 ?? :', tf_light)
-    if not self.stop_ing:
-        if line_dis < LATE_DIS:
-            self.late_2_stop = True
+    
     if not self.late_2_stop:
         if line_dis < STOP_DISTANCE:
             if tf_light[3] == 1:
@@ -587,7 +587,11 @@ def stopline_straight(self, c_UTM, tf_light, s_m):
             else:
                 s_m.data = SERIAL_SLOW
     else:
-        s_m.data = SERIAL_NOMAL
+        s_m.data = SERIAL_DILEMMA
+
+    if not self.stop_ing:
+        if line_dis < LATE_DIS:
+            self.late_2_stop = True
         
 '''비신호 정지선'''
 def stopline_no_light(self, c_UTM, tf_light, s_m):
@@ -609,7 +613,7 @@ def stopline_no_light(self, c_UTM, tf_light, s_m):
                     self.stop_ing = True
                     self.time_check = False
             elif STOP_DISTANCE <= line_dis < STOP_DISTANCE_PRE:
-                s_m.data = SERIAL_NOMAL # 1003 stopline change SERIAL_SLOW
+                s_m.data = SERIAL_SLOW # 1003 stopline change SERIAL_SLOW
                 print(" 감속중 ...")
             else:
                 s_m.data = SERIAL_NOMAL
@@ -660,7 +664,7 @@ def small_object_fuc(self,local,lidar,s_m):
     #회피점 offset_D
     move_first = 2.0
     move_first2 = 2.0
-    move_second = 2.0
+    move_second = 2.2
 
     #첫번째 보간점 선정
     f_csp1 = 180
@@ -689,7 +693,7 @@ def small_object_fuc(self,local,lidar,s_m):
             tree_val = self.tae_path.g_kd_tree.query((p[0], p[1])) # e2f.get_lateral_dist(standard_path.g_p[:,0], standard_path.g_p[:,1], cone[i][0], cone[i][1])
             dis = tree_val[0]
             print("distance :", dis)
-            if abs(dis) > 1.8 :  # 글로벌 패스에서 폭 범위를 설정히여 장애물을 걸러낸다.
+            if abs(dis) > 1.5 :  # 글로벌 패스에서 폭 범위를 설정히여 장애물을 걸러낸다.
                 print("차선 밖 장애물이 걸리짐")
                 continue
             else:

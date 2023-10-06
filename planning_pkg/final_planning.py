@@ -119,8 +119,8 @@ class Planning(Node):
         self.car_yaw_pub = self.create_publisher(Float64,'/Planning/heading',qosprofile) # 터널에서 차량 heading publishe
 
         """ Local """
-        self.c_utm_sub = self.create_subscription(PointStamped,'/Local/utm',self.local.lo_c_UTM_callback,qos_profile_sensor_data) # utm sub
-        self.c_yaw_sub = self.create_subscription(Float64,'/Local/heading',self.local.lo_c_yaw_callback,qos_profile_sensor_data)  # yaw sub
+        self.c_utm_sub = self.create_subscription(PointStamped,'/Local/utm',self.local.lo_c_UTM_callback,qosprofile) # utm sub
+        self.c_yaw_sub = self.create_subscription(Float64,'/Local/heading',self.local.lo_c_yaw_callback,qosprofile)  # yaw sub
 
         """ Lidar """
         self.l_dynamic_sub = self.create_subscription(Bool,'/LiDAR/dynamic_stop',self.lidar.dynamic_callback,qosprofile) # 동적 sub
